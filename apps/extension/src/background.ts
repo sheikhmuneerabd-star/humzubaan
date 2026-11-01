@@ -91,9 +91,21 @@ async function toErrorResponse(req: ExtRequest, error: unknown): Promise<ExtResp
   return { ok: false, error: "Extension mein masla aa gaya." };
 }
 
+// Web page ke andar chalne wala content script sirf ye 2 kaam kar sakta hai
+const CONTENT_ALLOWED = new Set<ExtRequest["type"]>(["TRANSLATE", "GET_SESSION"]);
+
 chrome.runtime.onMessage.addListener((req: ExtRequest, sender, sendResponse) => {
   // Sirf apni extension ke messages qabool karo
   if (sender.id !== chrome.runtime.id) return false;
+
+  // Tab ke andar se aaya aur extension ka apna page nahi, to ye content script hai
+  const fromContentScript =
+    !!sender.tab && !(sender.url ?? "").startsWith(chrome.runtime.getURL(""));
+
+  if (fromContentScript && !CONTENT_ALLOWED.has(req?.type)) {
+    sendResponse({ ok: false, error: "Ye action yahan se allowed nahi hai." } satisfies ExtResponse);
+    return false;
+  }
 
   handle(req)
     .then((data) => sendResponse({ ok: true, data } satisfies ExtResponse))
