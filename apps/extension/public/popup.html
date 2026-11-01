@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Humzubaan</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <header>
+      <strong>Humzubaan</strong>
+      <span id="who" class="muted"></span>
+      <button id="logout" class="link hidden">Logout</button>
+    </header>
+
+    <section id="view-auth" class="hidden">
+      <h2 id="auth-title">Login</h2>
+      <label id="name-row" class="hidden">Naam<input id="name" type="text" autocomplete="name" /></label>
+      <label>Email<input id="email" type="email" autocomplete="email" /></label>
+      <label>Password<input id="password" type="password" autocomplete="current-password" /></label>
+      <button id="auth-submit" class="primary">Login</button>
+      <p id="auth-error" class="error"></p>
+      <button id="auth-toggle" class="link">Account nahi hai? Register karein</button>
+    </section>
+
+    <section id="view-main" class="hidden">
+      <div class="tabs">
+        <button id="tab-incoming" class="tab active">Client ka message</button>
+        <button id="tab-outgoing" class="tab">Mera reply</button>
+      </div>
+
+      <label for="text" id="input-label"></label>
+      <textarea id="text" rows="5" maxlength="2000"></textarea>
+
+      <div class="row">
+        <label>Urdu style
+          <select id="script">
+            <option value="roman">Roman Urdu</option>
+            <option value="urdu">اردو</option>
+          </select>
+        </label>
+        <label id="tone-row" class="hidden">Lehja
+          <select id="tone">
+            <option value="professional">Professional</option>
+            <option value="friendly">Friendly</option>
+            <option value="polite">Polite</option>
+            <option value="formal">Formal</option>
+            <option value="casual">Casual</option>
+          </select>
+        </label>
+      </div>
+
+      <button id="go" class="primary">Translate</button>
+      <p id="error" class="error"></p>
+
+      <div id="result" class="hidden">
+        <h3 id="res-title"></h3>
+        <div id="res-translation" class="box" dir="auto"></div>
+        <button id="copy" class="secondary">Copy</button>
+        <div id="extra" class="hidden">
+          <h3 id="extra-title"></h3>
+          <div id="res-extra" class="box" dir="auto"></div>
+        </div>
+        <p id="res-meta" class="muted"></p>
+      </div>
+
+      <p id="usage" class="muted"></p>
+    </section>
+
+    <script src="popup.js"></script>
+  </body>
+</html>
