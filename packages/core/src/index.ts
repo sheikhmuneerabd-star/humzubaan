@@ -7,3 +7,10 @@ export function getHealthStatus() {
     time: new Date().toISOString(),
   };
 }
+
+export { connectDB } from "./db/connect";
+export { User } from "./models/User";
+export type { UserDoc } from "./models/User";
+export { AppError } from "./errors";
+export { verifyToken, signToken } from "./auth/jwt";
+export { registerUser, loginUser, toPublicUser } from "./services/authService";
