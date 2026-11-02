@@ -18,12 +18,14 @@ const incomingSchema = z.object({
   translation: z.string().min(1),
   summary: z.string().default(""),
   tone: z.string().default(""),
+  note: z.string().nullish().transform((v) => v ?? ""),
 });
 
 const outgoingSchema = z.object({
   detectedLanguage: z.string().min(1),
   translation: z.string().min(1),
   backTranslation: z.string().default(""),
+  note: z.string().nullish().transform((v) => v ?? ""),
 });
 
 const BAD_REPLY = "AI ka jawab samajh nahi aaya. Dobara try karein.";
@@ -96,8 +98,11 @@ export class GroqProvider implements AIProvider {
     throw new AppError("AI service tak pohanchna mumkin nahi hua. Thori dair baad try karein.", 504);
   }
 
-  private async chat(system: string, text: string): Promise<{ content: string; tokens: number }> {
-    const userContent = JSON.stringify({ message: text });
+    private async chat(
+    system: string,
+    payload: Record<string, string>
+  ): Promise<{ content: string; tokens: number }> {
+    const userContent = JSON.stringify(payload);
 
     let res = await this.request(system, userContent, true);
     if (res.status === 400) {
@@ -145,23 +150,29 @@ export class GroqProvider implements AIProvider {
     text: string;
     script: Script;
   }): Promise<WithTokens<IncomingResult>> {
-    const { content, tokens } = await this.chat(incomingSystemPrompt(input.script), input.text);
+    const { content, tokens } = await this.chat(incomingSystemPrompt(input.script), {
+      message: input.text,
+    });
     const parsed = incomingSchema.safeParse(extractJson(content));
     if (!parsed.success) throw new AppError(BAD_REPLY, 502);
     return { result: parsed.data, tokens };
   }
 
-  async translateOutgoing(input: {
-    text: string;
-    script: Script;
-    tone: Tone;
-  }): Promise<WithTokens<OutgoingResult>> {
-    const { content, tokens } = await this.chat(
-      outgoingSystemPrompt(input.script, input.tone),
-      input.text
-    );
-    const parsed = outgoingSchema.safeParse(extractJson(content));
-    if (!parsed.success) throw new AppError(BAD_REPLY, 502);
-    return { result: parsed.data, tokens };
-  }
+    async translateOutgoing(input: {
+        text: string;
+        script: Script;
+        tone: Tone;
+        context?: string;
+    }): Promise<WithTokens<OutgoingResult>> {
+        const payload: Record<string, string> = { message: input.text };
+        if (input.context) payload.clientMessage = input.context;
+
+        const { content, tokens } = await this.chat(
+        outgoingSystemPrompt(input.script, input.tone),
+        payload
+        );
+        const parsed = outgoingSchema.safeParse(extractJson(content));
+        if (!parsed.success) throw new AppError(BAD_REPLY, 502);
+        return { result: parsed.data, tokens };
+    }
 }

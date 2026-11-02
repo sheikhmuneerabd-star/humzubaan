@@ -24,6 +24,7 @@ export async function translateText(userId: string, input: unknown) {
       text: data.text,
       script: data.script,
       tone: data.tone,
+      context: data.context || undefined,
     });
     await addTokens(userId, tokens);
     return { mode: data.mode, ...result, usage: await getUsageToday(userId) };

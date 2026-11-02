@@ -12,6 +12,7 @@ export type TranslateResult = {
   summary?: string;
   tone?: string;
   backTranslation?: string;
+  note?: string;
   usage: { used: number; limit: number; remaining: number };
 };
 
@@ -20,7 +21,16 @@ export type ExtRequest =
   | { type: "LOGIN"; email: string; password: string }
   | { type: "REGISTER"; name: string; email: string; password: string }
   | { type: "LOGOUT" }
-  | { type: "TRANSLATE"; mode: Mode; text: string; script: Script; tone: Tone };
+  | { type: "TRANSLATE"; mode: Mode; text: string; script: Script; tone: Tone; context?: string }
+  | {
+      type: "SAVE_TRANSLATION";
+      translationType: Mode;
+      originalText: string;
+      translatedText: string;
+      sourceLanguage: string;
+      targetLanguage: string;
+      tone: string;
+    };
 
 export type ExtResponse<T = unknown> =
   | { ok: true; data: T }

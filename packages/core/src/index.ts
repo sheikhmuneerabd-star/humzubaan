@@ -17,3 +17,10 @@ export { registerUser, loginUser, toPublicUser } from "./services/authService";
 export { translateText } from "./services/translateService";
 export { getUsageToday, getDailyLimit } from "./services/usageService";
 export { getAIProvider } from "./ai";
+export {
+  saveTranslation,
+  listTranslations,
+  getTranslation,
+  deleteTranslation,
+  deleteAllTranslations,
+} from "./services/historyService";

@@ -4,8 +4,8 @@ import type { ExtRequest, ExtResponse, Script, Tone, TranslateResult } from "./m
 const MAX_CHARS = 2000;
 const PREFS_KEY = "prefs";
 
-type Prefs = { script: Script; tone: Tone };
-const DEFAULT_PREFS: Prefs = { script: "roman", tone: "professional" };
+type Prefs = { script: Script; tone: Tone; dock: "right" | "left" };
+const DEFAULT_PREFS: Prefs = { script: "roman", tone: "professional", dock: "right" };
 
 class UiError extends Error {
   authExpired = false;
@@ -69,7 +69,7 @@ const CSS = `
   cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.3);
 }
 .panel {
-  position: fixed; z-index: 2147483647; right: 16px; bottom: 16px; width: 380px;
+  position: fixed; z-index: 2147483647; bottom: 16px; width: 380px;
   max-width: calc(100vw - 32px); max-height: calc(100vh - 32px); overflow: auto;
   background: var(--bg); border: 1px solid var(--border); border-radius: 12px;
   box-shadow: 0 10px 40px rgba(0,0,0,.35); padding: 12px;
@@ -80,6 +80,7 @@ const CSS = `
 .x { border: 0; background: none; color: var(--muted); font-size: 20px; line-height: 1; cursor: pointer; }
 h4 { margin: 10px 0 4px; font-size: 13px; }
 .box { padding: 9px; background: var(--box); border-radius: 8px; white-space: pre-wrap; word-break: break-word; color: var(--fg); }
+.note { margin: 8px 0 0; padding: 8px; border: 1px solid var(--accent); border-radius: 8px; font-size: 13px; white-space: pre-wrap; word-break: break-word; }
 .muted { color: var(--muted); font-size: 12px; margin: 6px 0 0; }
 .error { color: var(--error); font-size: 13px; margin: 6px 0 0; }
 hr { border: 0; border-top: 1px solid var(--border); margin: 12px 0; }
@@ -97,6 +98,17 @@ textarea { resize: vertical; }
 function init() {
   let prefs: Prefs = DEFAULT_PREFS;
   let pendingText = "";
+    type SaveData = {
+    translationType: "incoming" | "outgoing";
+    originalText: string;
+    translatedText: string;
+    sourceLanguage: string;
+    targetLanguage: string;
+    tone: string;
+  };
+  let lastIncoming: SaveData | null = null;
+  let lastOutgoing: SaveData | null = null;
+  let lastClientText = ""; // sirf reply samajhne ke liye, panel band hote hi mit jata hai
 
   /* ---------- Shadow DOM ---------- */
   const host = document.createElement("div");
@@ -125,11 +137,15 @@ function init() {
   const scriptSel = el("select");
   scriptSel.setAttribute("aria-label", "Urdu style");
   scriptSel.append(new Option("Roman Urdu", "roman"), new Option("اردو", "urdu"));
+  const dockBtn = el("button", "x", "⇄");
+  dockBtn.type = "button";
+  dockBtn.title = "Panel doosri taraf le jayen";
+  dockBtn.setAttribute("aria-label", "Panel doosri taraf le jayen");
   const closeBtn = el("button", "x", "×");
   closeBtn.type = "button";
   closeBtn.setAttribute("aria-label", "Band karein");
   const head = el("div", "head");
-  head.append(el("strong", "", "Humzubaan"), scriptSel, closeBtn);
+  head.append(el("strong", "", "Humzubaan"), scriptSel, dockBtn, closeBtn);
 
   // Incoming (client ka message)
   const incStatus = el("p", "muted");
@@ -138,12 +154,16 @@ function init() {
   incTranslation.dir = "auto";
   const incCopy = el("button", "btn alt", "Copy tarjuma");
   incCopy.type = "button";
+  const incSave = el("button", "btn alt", "Save karein");
+  incSave.type = "button";
   const incSummary = el("div", "box");
   incSummary.dir = "auto";
+  const incNote = el("div", "note hidden");
+  incNote.dir = "auto";
   const incMeta = el("p", "muted");
   incResult.append(
-    el("h4", "", "Tarjuma"), incTranslation, incCopy,
-    el("h4", "", "Client kya chahta hai"), incSummary, incMeta
+        el("h4", "", "Tarjuma"), incTranslation, incCopy, incSave,
+    el("h4", "", "Client kya chahta hai"), incSummary, incNote, incMeta
   );
 
   // Outgoing (aap ka reply)
@@ -168,12 +188,16 @@ function init() {
   outTranslation.dir = "auto";
   const outCopy = el("button", "btn alt", "Copy English reply");
   outCopy.type = "button";
+    const outSave = el("button", "btn alt", "Save karein");
+  outSave.type = "button";
   const outBack = el("div", "box");
   outBack.dir = "auto";
+  const outNote = el("div", "note hidden");
+  outNote.dir = "auto";
   const outMeta = el("p", "muted");
   outResult.append(
-    el("h4", "", "English reply (Fiverr mein khud paste karein)"), outTranslation, outCopy,
-    el("h4", "", "Check karein: is English ka matlab"), outBack, outMeta
+        el("h4", "", "English reply (Fiverr mein khud paste karein)"), outTranslation, outCopy, outSave,
+    el("h4", "", "Check karein: is English ka matlab"), outBack, outNote, outMeta
   );
   const usageNote = el("p", "muted");
 
@@ -185,10 +209,18 @@ function init() {
   document.documentElement.append(host);
 
   /* ---------- Prefs ---------- */
+  function applyDock() {
+    const left = prefs.dock === "left";
+    panel.style.left = left ? "16px" : "auto";
+    panel.style.right = left ? "auto" : "16px";
+  }
+  applyDock();
+
   loadPrefs().then((p) => {
     prefs = p;
     scriptSel.value = p.script;
     toneSel.value = p.tone;
+    applyDock();
   });
   scriptSel.addEventListener("change", () => {
     prefs = { ...prefs, script: scriptSel.value as Script };
@@ -197,6 +229,11 @@ function init() {
   toneSel.addEventListener("change", () => {
     prefs = { ...prefs, tone: toneSel.value as Tone };
     savePrefs(prefs);
+  });
+  dockBtn.addEventListener("click", () => {
+    prefs = { ...prefs, dock: prefs.dock === "left" ? "right" : "left" };
+    savePrefs(prefs);
+    applyDock();
   });
 
   /* ---------- Copy ---------- */
@@ -219,6 +256,23 @@ function init() {
   incCopy.addEventListener("click", () => copyText(incTranslation.textContent ?? "", incCopy));
   outCopy.addEventListener("click", () => copyText(outTranslation.textContent ?? "", outCopy));
 
+  
+  async function saveItem(data: SaveData | null, btn: HTMLButtonElement, errorTarget: HTMLElement) {
+    if (!data) return;
+    btn.disabled = true;
+    btn.textContent = "Save ho raha hai...";
+    try {
+      await call({ type: "SAVE_TRANSLATION", ...data });
+      btn.textContent = "Save ho gaya ✓";
+    } catch (e) {
+      btn.disabled = false;
+      btn.textContent = "Save karein";
+      showError(errorTarget, e);
+    }
+  }
+  incSave.addEventListener("click", () => saveItem(lastIncoming, incSave, incStatus));
+  outSave.addEventListener("click", () => saveItem(lastOutgoing, outSave, replyError));
+
   /* ---------- Translate flows ---------- */
   function showError(target: HTMLElement, e: unknown) {
     target.textContent =
@@ -227,7 +281,13 @@ function init() {
         : messageOf(e);
   }
 
+  function setNote(box: HTMLElement, note?: string) {
+    box.textContent = note ? `⚠ ${note}` : "";
+    box.classList.toggle("hidden", !note);
+  }
+
   async function runIncoming(text: string) {
+    lastClientText = "";
     incResult.classList.add("hidden");
     if (text.length > MAX_CHARS) {
       incStatus.textContent = `Text bohat lamba hai (zyada se zyada ${MAX_CHARS} characters). Chhota hissa select karein.`;
@@ -238,8 +298,20 @@ function init() {
       const r = await call<TranslateResult>({
         type: "TRANSLATE", mode: "incoming", text, script: prefs.script, tone: prefs.tone,
       });
+      lastClientText = text;
+            lastIncoming = {
+        translationType: "incoming",
+        originalText: text,
+        translatedText: r.translation,
+        sourceLanguage: r.detectedLanguage,
+        targetLanguage: prefs.script === "roman" ? "Roman Urdu" : "Urdu",
+        tone: r.tone ?? "",
+      };
+      incSave.disabled = false;
+      incSave.textContent = "Save karein";
       incTranslation.textContent = r.translation;
       incSummary.textContent = r.summary ?? "";
+      setNote(incNote, r.note);
       incMeta.textContent = `Zubaan: ${r.detectedLanguage}${r.tone ? ` • Lehja: ${r.tone}` : ""}`;
       usageNote.textContent = `Aaj baqi translations: ${r.usage.remaining} / ${r.usage.limit}`;
       incStatus.textContent = "";
@@ -260,10 +332,26 @@ function init() {
     replyBtn.textContent = "Ban raha hai...";
     try {
       const r = await call<TranslateResult>({
-        type: "TRANSLATE", mode: "outgoing", text, script: prefs.script, tone: toneSel.value as Tone,
+        type: "TRANSLATE",
+        mode: "outgoing",
+        text,
+        script: prefs.script,
+        tone: toneSel.value as Tone,
+        context: lastClientText.slice(0, 1000) || undefined,
       });
       outTranslation.textContent = r.translation;
+            lastOutgoing = {
+        translationType: "outgoing",
+        originalText: text,
+        translatedText: r.translation,
+        sourceLanguage: r.detectedLanguage,
+        targetLanguage: "English",
+        tone: toneSel.value,
+      };
+      outSave.disabled = false;
+      outSave.textContent = "Save karein";
       outBack.textContent = r.backTranslation ?? "";
+      setNote(outNote, r.note);
       outMeta.textContent = `Aap ne likha: ${r.detectedLanguage}`;
       usageNote.textContent = `Aaj baqi translations: ${r.usage.remaining} / ${r.usage.limit}`;
       outResult.classList.remove("hidden");
@@ -286,12 +374,15 @@ function init() {
     runIncoming(text);
   }
 
-  // Band karne par aap ka likha hua aur nataij page se mita do
+  // Band karne par aap ka likha hua, client ka text aur nataij page se mita do
   function closePanel() {
     panel.classList.add("hidden");
     incResult.classList.add("hidden");
     outResult.classList.add("hidden");
     replyInput.value = "";
+    lastIncoming = null;
+    lastOutgoing = null;
+    lastClientText = "";
     incStatus.textContent = "";
     replyError.textContent = "";
   }

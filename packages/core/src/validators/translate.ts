@@ -9,4 +9,6 @@ export const translateSchema = z.object({
   mode: z.enum(["incoming", "outgoing"], { message: "mode 'incoming' ya 'outgoing' hona chahiye" }),
   script: z.enum(["roman", "urdu"]).default("roman"),
   tone: z.enum(["professional", "friendly", "polite", "formal", "casual"]).default("professional"),
+  // Client ka message, sirf reply samajhne ke liye (optional)
+  context: z.string().trim().max(1000, "Context bohat lamba hai").optional(),
 });

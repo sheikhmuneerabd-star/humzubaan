@@ -66,13 +66,30 @@ async function handle(req: ExtRequest): Promise<unknown> {
       return null;
     }
 
+        case "SAVE_TRANSLATION": {
+      const session = await getSession();
+      if (!session) throw new ApiError("Pehle login karein", 401);
+      return api<{ id: string }>("/api/translations", {
+        method: "POST",
+        token: session.token,
+        body: {
+          translationType: req.translationType,
+          originalText: req.originalText,
+          translatedText: req.translatedText,
+          sourceLanguage: req.sourceLanguage,
+          targetLanguage: req.targetLanguage,
+          tone: req.tone,
+        },
+      });
+    }
+
     case "TRANSLATE": {
       const session = await getSession();
       if (!session) throw new ApiError("Pehle login karein", 401);
       return api<TranslateResult>("/api/translate", {
         method: "POST",
         token: session.token,
-        body: { mode: req.mode, text: req.text, script: req.script, tone: req.tone },
+        body: { mode: req.mode, text: req.text, script: req.script, tone: req.tone, context: req.context },
       });
     }
   }
@@ -81,7 +98,7 @@ async function handle(req: ExtRequest): Promise<unknown> {
 async function toErrorResponse(req: ExtRequest, error: unknown): Promise<ExtResponse> {
   if (error instanceof ApiError) {
     // Token expire ya galat ho gaya: session saaf kar do taake popup login dikhaye
-    if (error.status === 401 && req.type === "TRANSLATE") {
+    if (error.status === 401 && (req.type === "TRANSLATE" || req.type === "SAVE_TRANSLATION")) {
       await chrome.storage.local.remove(SESSION_KEY);
       return { ok: false, error: error.message, authExpired: true };
     }
@@ -92,7 +109,7 @@ async function toErrorResponse(req: ExtRequest, error: unknown): Promise<ExtResp
 }
 
 // Web page ke andar chalne wala content script sirf ye 2 kaam kar sakta hai
-const CONTENT_ALLOWED = new Set<ExtRequest["type"]>(["TRANSLATE", "GET_SESSION"]);
+const CONTENT_ALLOWED = new Set<ExtRequest["type"]>(["TRANSLATE", "GET_SESSION", "SAVE_TRANSLATION"]);
 
 chrome.runtime.onMessage.addListener((req: ExtRequest, sender, sendResponse) => {
   // Sirf apni extension ke messages qabool karo

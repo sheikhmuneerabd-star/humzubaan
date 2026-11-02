@@ -6,17 +6,18 @@ export type IncomingResult = {
   translation: string;
   summary: string;
   tone: string;
+  note: string;
 };
 
 export type OutgoingResult = {
   detectedLanguage: string;
   translation: string;
   backTranslation: string;
+  note: string;
 };
 
 export type WithTokens<T> = { result: T; tokens: number };
 
-// Har AI provider (Groq, baad mein OpenAI/Gemini) is shape ko follow karega
 export interface AIProvider {
   readonly name: string;
   translateIncoming(input: { text: string; script: Script }): Promise<WithTokens<IncomingResult>>;
@@ -24,5 +25,6 @@ export interface AIProvider {
     text: string;
     script: Script;
     tone: Tone;
+    context?: string;
   }): Promise<WithTokens<OutgoingResult>>;
 }
