@@ -201,9 +201,15 @@ function init() {
   );
   const usageNote = el("p", "muted");
 
+  const privacyNote = el(
+    "p",
+    "muted",
+    "Translate dabane par sirf ye text AI service ko jata hai. Save sirf aap ke click par hota hai."
+  );
+
   panel.append(
     head, incStatus, incResult, el("hr"),
-    el("h4", "", "Aap ka reply"), replyInput, replyRow, replyError, outResult, usageNote
+    el("h4", "", "Aap ka reply"), replyInput, replyRow, replyError, outResult, usageNote, privacyNote
   );
   ui.append(fab, panel);
   document.documentElement.append(host);

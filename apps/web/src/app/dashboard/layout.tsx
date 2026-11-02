@@ -10,6 +10,7 @@ const nav = [
   { href: "/dashboard", label: "Overview" },
   { href: "/dashboard/history", label: "History" },
   { href: "/dashboard/extension", label: "Extension" },
+  { href: "/dashboard/settings", label: "Settings" },
 ];
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {

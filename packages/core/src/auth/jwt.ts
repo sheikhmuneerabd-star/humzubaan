@@ -5,6 +5,8 @@ export type TokenPayload = {
   role: "user" | "admin";
 };
 
+export type VerifiedToken = TokenPayload & { issuedAt: number };
+
 function getSecret(): Uint8Array {
   const secret = process.env.JWT_SECRET;
   if (!secret || secret.length < 32) {
@@ -22,7 +24,7 @@ export async function signToken(payload: TokenPayload): Promise<string> {
     .sign(getSecret());
 }
 
-export async function verifyToken(token: string): Promise<TokenPayload | null> {
+export async function verifyToken(token: string): Promise<VerifiedToken | null> {
   const secret = getSecret(); // config ka error chhupna nahi chahiye
   try {
     const { payload } = await jwtVerify(token, secret, { algorithms: ["HS256"] });
@@ -30,6 +32,7 @@ export async function verifyToken(token: string): Promise<TokenPayload | null> {
     return {
       userId: payload.sub,
       role: payload.role === "admin" ? "admin" : "user",
+      issuedAt: typeof payload.iat === "number" ? payload.iat : 0,
     };
   } catch {
     return null; // token galat ya expire

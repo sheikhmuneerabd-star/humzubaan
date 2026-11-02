@@ -15,6 +15,7 @@ const userSchema = new Schema(
     preferredLanguage: { type: String, default: "ur" },
     preferredScript: { type: String, enum: ["roman", "urdu"], default: "roman" },
     role: { type: String, enum: ["user", "admin"], default: "user" },
+    tokenValidAfter: { type: Date },
   },
   { timestamps: true }
 );

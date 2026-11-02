@@ -2,10 +2,11 @@ import { getAIProvider } from "../ai";
 import { validate } from "../validators/auth";
 import { translateSchema } from "../validators/translate";
 import { addTokens, getUsageToday, releaseRequest, reserveRequest } from "./usageService";
+import { rateLimit } from "./rateLimit";
 
 export async function translateText(userId: string, input: unknown) {
   const data = validate(translateSchema, input);
-
+  await rateLimit("translate-user", userId, 10, 60); // 1 minute mein 10
   await reserveRequest(userId);
 
   try {

@@ -24,3 +24,5 @@ export {
   deleteTranslation,
   deleteAllTranslations,
 } from "./services/historyService";
+export { rateLimit } from "./services/rateLimit";
+export { updateProfile, changePassword, deleteAccount } from "./services/userService";

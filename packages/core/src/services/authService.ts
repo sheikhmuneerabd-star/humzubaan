@@ -4,6 +4,7 @@ import { AppError } from "../errors";
 import { hashPassword, verifyPassword } from "../auth/password";
 import { signToken } from "../auth/jwt";
 import { validate, registerSchema, loginSchema } from "../validators/auth";
+import { rateLimit } from "./rateLimit";
 
 type UserLike = {
   _id: unknown;
@@ -58,6 +59,8 @@ export async function registerUser(input: unknown) {
 
 export async function loginUser(input: unknown) {
   const { email, password } = validate(loginSchema, input);
+  // Ek email par bar bar password guess karne se bachao
+  await rateLimit("login-email", email, 10, 900);
   await connectDB();
 
   const user = await User.findOne({ email }).select("+passwordHash");

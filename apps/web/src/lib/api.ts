@@ -19,6 +19,15 @@ export function clearSessionCookie(res: NextResponse) {
   res.cookies.set(SESSION_COOKIE, "", { ...cookieBase, maxAge: 0 });
 }
 
+// Vercel jaisi hosting par ye header platform khud sahi set karta hai
+export function clientIp(req: Request): string {
+  const real = req.headers.get("x-real-ip");
+  if (real) return real.trim();
+  const forwarded = req.headers.get("x-forwarded-for");
+  if (forwarded) return forwarded.split(",")[0].trim();
+  return "local";
+}
+
 export function handleError(error: unknown) {
   if (error instanceof AppError) {
     return NextResponse.json({ error: error.message }, { status: error.status });
@@ -67,6 +76,12 @@ export async function requireUser(req: Request) {
   await connectDB();
   const user = await User.findById(payload.userId);
   if (!user) throw new AppError("Account nahi mila", 401);
+
+  // Password badalne se pehle bane tokens band
+  const validAfter = user.tokenValidAfter ? Math.floor(user.tokenValidAfter.getTime() / 1000) : 0;
+  if (payload.issuedAt < validAfter) {
+    throw new AppError("Password badal gaya hai, dobara login karein", 401);
+  }
 
   return user;
 }

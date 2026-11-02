@@ -70,6 +70,14 @@ export default function Home() {
           dabane par bhejte hain.
         </section>
       </main>
+      <footer className="flex justify-center gap-4 border-t border-zinc-200 py-6 text-sm text-zinc-500 dark:border-zinc-800">
+        <Link href="/privacy" className="hover:underline">
+          Privacy
+        </Link>
+        <Link href="/terms" className="hover:underline">
+          Terms
+        </Link>
+      </footer>
     </div>
   );
 }
