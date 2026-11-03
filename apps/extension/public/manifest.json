@@ -6,7 +6,7 @@
   "action": { "default_popup": "popup.html", "default_title": "Humzubaan" },
   "background": { "service_worker": "background.js" },
   "permissions": ["storage"],
-  "host_permissions": ["http://localhost:3000/*"],
+  "host_permissions": ["https://humzubaan.vercel.app/*"],
   "content_scripts": [
     {
       "matches": ["https://www.fiverr.com/*", "https://fiverr.com/*"],
